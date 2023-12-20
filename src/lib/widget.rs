@@ -9,12 +9,23 @@ pub trait Widget {
     fn build(&self, ctx: &BuildContext);
 }
 
+pub trait Constrained {
+    fn get_min() -> Vec2 {
+        vec2(f32::MIN, f32::MIN)
+    }
+
+    fn get_max() -> Vec2 {
+        vec2(f32::MAX, f32::MAX)
+    }
+}
+
 /// Widget for rendering text on the scree
 pub struct Text {
     value: String,
     font_size: Option<u16>,
     color: Option<Color>,
     rotation: f32,
+    hard_wrap: bool,
 }
 
 impl Widget for &str {
@@ -35,22 +46,34 @@ impl Widget for &str {
 
 impl Widget for Text {
     fn build(&self, ctx: &BuildContext) {
-        // draw_text_ex(
-        //   &self.value.clone(),
-        //   ctx.position.x,
-        //   ctx.position.y,
-        //   TextParams {
-        //     font_size: self.font_size.unwrap_or(ctx.theme.font_size),
-        //     color: self.color.unwrap_or(ctx.theme.text_color),
-        //     rotation: self.rotation,
-        //     ..Default::default()
-        //   },
-        // );
+        let font_size = self.font_size.unwrap_or(ctx.theme.font_size);
+        let text_width = measure_text(&self.value, None, font_size, 1.0);
+
+        assert!(
+            !self.hard_wrap || text_width.width <= ctx.size.x,
+            "Text overflowed by \
+        {} pixels. Specify `hard_wrap = true` if you wish to wrap \
+        the text.",
+            text_width.width - ctx.size.x
+        );
+        assert!(!self.hard_wrap || text_width.height <= ctx.size.y);
+
+        draw_text_ex(
+            &self.value,
+            ctx.position.x,
+            ctx.position.y,
+            TextParams {
+                font_size,
+                color: self.color.unwrap_or(ctx.theme.text_color),
+                rotation: self.rotation,
+                ..Default::default()
+            },
+        );
         draw_text(
             &self.value,
             ctx.position.x,
             ctx.position.y,
-            self.font_size.unwrap_or(ctx.theme.font_size) as f32,
+            font_size as f32,
             self.color.unwrap_or(ctx.theme.text_color),
         );
     }
@@ -63,6 +86,7 @@ impl Default for Text {
             font_size: None,
             color: None,
             rotation: 0.0,
+            hard_wrap: true,
         }
     }
 }
@@ -88,18 +112,12 @@ impl Widget for Row {
     fn build(&self, ctx: &BuildContext) {
         let max_x = ctx.size.x;
         let max_y = ctx.size.y;
-        let child_count = self.children.iter().count();
+        let child_count = self.children.len();
 
         for (idx, child) in self.children.iter().enumerate() {
             child.build(&ctx.child_context(
-                Vec2 {
-                    x: max_x / child_count as f32,
-                    y: max_y,
-                },
-                Vec2 {
-                    x: ctx.position.x + max_x / idx as f32,
-                    y: ctx.position.y,
-                },
+                vec2(max_x / child_count as f32, max_y),
+                vec2(ctx.position.x + max_x / idx as f32, ctx.position.y),
             ))
         }
     }
