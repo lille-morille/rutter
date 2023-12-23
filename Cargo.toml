@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 glam = "0.25.0"
 macroquad = "0.4.4"
+uuid = { version = "1.6.1", features = ["v4"] }

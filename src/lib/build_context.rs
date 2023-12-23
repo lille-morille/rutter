@@ -11,14 +11,6 @@ pub struct BuildContext {
 }
 
 impl BuildContext {
-    pub fn new(size: Vec2, position: Vec2, theme: Option<Theme>) -> BuildContext {
-        BuildContext {
-            size,
-            position,
-            theme: theme.unwrap_or_default(),
-        }
-    }
-
     pub fn child_context(&self, size: Vec2, position: Vec2) -> BuildContext {
         assert!(
             size.x <= self.size.x,
@@ -30,9 +22,10 @@ impl BuildContext {
         );
 
         BuildContext {
-            size,
-            position,
             theme: self.theme.clone(),
+            position,
+            size,
+            ..self.clone()
         }
     }
 }
